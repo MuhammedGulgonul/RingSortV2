@@ -1124,8 +1124,9 @@ class App {
 
 document.addEventListener('DOMContentLoaded', () => {
     const game = new App();
+    window.game = game; // Global reference for SDK
 
-    // V13.0: Robust Yandex Initialization (Race Condition Fix)
+    // V14.0: Clean SDK Initialization (No Race Condition)
     const startApp = () => {
         const loader = document.getElementById('loading-screen');
         if (loader) {
@@ -1135,25 +1136,45 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (window.YaGames) {
-        Promise.race([
-            YaGames.init(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-        ]).then(ysdk => {
-            console.log('Yandex SDK Initialized');
+        YaGames.init().then(ysdk => {
+            const yandexLang = ysdk.environment?.i18n?.lang;
+            console.log('Yandex SDK Initialized, lang:', yandexLang || 'unknown');
             window.ysdk = ysdk;
-            // V13.6: Sync Logic (Unsaved Only)
+
+            // Notify Yandex that game is ready
+            ysdk.features.LoadingAPI?.ready();
+
+            // Language Detection Logic
             if (game && game.lang) {
                 const saved = localStorage.getItem('rs_lang');
-                if (!saved) game.lang.setLanguage(ysdk.environment.i18n.lang);
+
+                if (saved) {
+                    // Priority 1: User saved preference
+                    console.log('→ Using saved language:', saved);
+                    game.lang.setLanguage(saved, false);
+                } else {
+                    // Priority 2: Browser language (already set in constructor)
+                    const currentLang = game.lang.lang; // Already set to browser lang
+                    const isYandexPlatform = window.location.hostname.includes('yandex');
+
+                    // Only override with SDK language on Yandex platform
+                    if (isYandexPlatform && yandexLang && yandexLang !== currentLang) {
+                        console.log('→ Using Yandex SDK language:', yandexLang, '(was:', currentLang + ')');
+                        game.lang.setLanguage(yandexLang, false);
+                    } else {
+                        console.log('→ Keeping browser language:', currentLang, '(local test)');
+                    }
+                }
             }
+
             startApp();
         }).catch(e => {
-            console.warn('SDK Init Fail/Timeout:', e);
-            startApp(); // Fallback: Start anyway
+            console.warn('SDK Init Fail:', e);
+            startApp(); // Fallback with browser language
         });
     } else {
         console.warn('YaGames not found (Offline Mode)');
-        setTimeout(startApp, 1000); // Simulate load
+        setTimeout(startApp, 1000);
     }
 });
 

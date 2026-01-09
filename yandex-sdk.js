@@ -296,5 +296,6 @@ window.YandexSDK = {
     get player() { return player; }
 };
 
-// Initialize SDK when script loads
-initYandexSDK();
+// AUTO-INIT DISABLED: SDK is now initialized in game.js
+// This prevents race condition and ensures proper language detection
+// initYandexSDK();
