@@ -1117,8 +1117,24 @@ class App {
             cb && cb();
         }
     }
-    load() { const d = JSON.parse(localStorage.getItem('rs_save') || '{}'); this.unlocked = d.u || 1; this.stars = d.s || {}; }
-    save() { localStorage.setItem('rs_save', JSON.stringify({ u: this.unlocked, s: this.stars })); }
+    load() {
+        const d = JSON.parse(localStorage.getItem('rs_save') || '{}');
+        this.unlocked = d.u || 1;
+        this.stars = d.s || {};
+    }
+    save() {
+        const saveData = { u: this.unlocked, s: this.stars };
+        localStorage.setItem('rs_save', JSON.stringify(saveData));
+
+        // Also save to Yandex Cloud if available
+        if (window.saveYandexProgress) {
+            window.saveYandexProgress({
+                levelsCompleted: this.unlocked - 1,
+                currentLevel: this.unlocked,
+                stars: Object.values(this.stars).reduce((a, b) => a + b, 0)
+            });
+        }
+    }
 
 }
 
