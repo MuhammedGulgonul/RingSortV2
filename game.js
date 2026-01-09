@@ -33,6 +33,7 @@ const TEXTS = {
         play_again: "Play Again",
         mystery_mode: "MYSTERY MODE",
         language: "Language",
+        game_title_main: "Ring Sort",
         game_title: "Ring Sort Puzzle",
         game_subtitle: "Puzzle Game"
     },
@@ -54,6 +55,7 @@ const TEXTS = {
         play_again: "Играть снова",
         mystery_mode: "ТАЙНЫЙ РЕЖИМ",
         language: "Язык",
+        game_title_main: "Сортировка Колец",
         game_title: "Ring Sort Puzzle",
         game_subtitle: "Игра-головоломка"
     },
@@ -75,6 +77,7 @@ const TEXTS = {
         play_again: "Tekrar Oyna",
         mystery_mode: "GİZEMLİ MOD",
         language: "Dil",
+        game_title_main: "Halka Sıralama",
         game_title: "Ring Sort Puzzle",
         game_subtitle: "Bulmaca Oyunu"
     }
@@ -94,6 +97,9 @@ class LanguageManager {
         }
 
         this.t = TEXTS[this.lang] || TEXTS['en'];
+
+        // Apply translations immediately on init
+        setTimeout(() => this.apply(), 100);
     }
 
     setLanguage(code, save = false) {
@@ -139,12 +145,12 @@ class LanguageManager {
         const setH2 = document.querySelector('#settings-modal h2');
         if (setH2) setH2.innerText = this.t.settings;
 
-        // V13.9: Title Localization
-        const titleEl = document.querySelector('.game-title h1');
-        if (titleEl) titleEl.innerText = this.t.game_title;
+        // V14.1: Title Localization (Fixed Selectors)
+        const titleH1 = document.getElementById('game-main-title');
+        if (titleH1) titleH1.innerText = this.t.game_title_main;
 
-        const subTitleEl = document.querySelector('.game-title .subtitle');
-        if (subTitleEl) subTitleEl.innerText = this.t.game_subtitle;
+        const subP = document.getElementById('game-subtitle');
+        if (subP) subP.innerText = this.t.game_subtitle;
 
         // V14.0: Dynamic Hint Tooltip
         const hintBtn = document.getElementById('btn-hint');

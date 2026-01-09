@@ -790,3 +790,23 @@ input:checked+.slider:before {
 .hidden {
     display: none !important;
 }
+
+/* Ad Badge for Hint Button */
+#btn-hint {
+    position: relative;
+}
+
+.ad-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    font-size: 0.7rem;
+    background: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
