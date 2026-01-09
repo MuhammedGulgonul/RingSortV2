@@ -1,0 +1,149 @@
+/* Mobile Responsive Styles for Ring Sort Puzzle */
+
+@media (max-width: 768px) {
+    /* --- General Typography --- */
+    :root {
+        --radius-l: 24px;
+        --radius-m: 16px;
+    }
+
+    .game-title h1 {
+        font-size: 3rem;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+    }
+
+    /* --- Menus --- */
+    .menu-card {
+        padding: 2rem 1.5rem;
+        width: 95%;
+        border-radius: 30px;
+    }
+
+    .btn {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+    }
+
+    #btn-play {
+        padding: 1.2rem;
+        font-size: 1.3rem;
+    }
+
+    /* --- Game HUD Header --- */
+    .game-header {
+        top: 10px;
+        padding: 0 10px;
+    }
+
+    .btn-icon-only {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+
+    .level-badge {
+        padding: 0.3rem 0.8rem;
+    }
+
+    .level-badge .lbl {
+        font-size: 0.6rem;
+    }
+
+    .level-badge .val {
+        font-size: 1.4rem;
+    }
+
+    /* --- Game HUD Footer --- */
+    .game-footer {
+        bottom: 15px;
+        padding: 0 10px;
+        height: auto;
+        align-items: center;
+    }
+
+    .moves-badge {
+        padding: 0.5rem 1rem;
+    }
+
+    .moves-badge .lbl {
+        font-size: 0.7rem;
+    }
+
+    .moves-badge .val {
+        font-size: 1.5rem;
+    }
+
+    #btn-undo {
+        padding: 0.8rem 1.2rem;
+        font-size: 1rem;
+    }
+
+    /* --- Level Select Grid --- */
+    #levels-grid {
+        grid-template-columns: repeat(4, 1fr); /* Keep 4 for tablet */
+        padding: 10px;
+        gap: 10px;
+    }
+
+    /* --- Modals --- */
+    .modal-card {
+        padding: 1.5rem;
+        width: 95%;
+    }
+
+    .victory-icon {
+        font-size: 4rem;
+    }
+
+    .star-container {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* --- Extra Small Screens (Phones) --- */
+
+    /* Stack Menu Buttons slightly more compact */
+    .menu-buttons {
+        gap: 10px;
+    }
+
+    /* Grid Adjustment */
+    #levels-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    /* Header adjustments for very small screens */
+    .header-actions {
+        display: flex;
+        gap: 5px;
+    }
+
+    .btn-icon-only {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    /* Ensure footer buttons don't overlap */
+    .game-footer {
+        flex-direction: row; /* Keep row but ensure scaling */
+        gap: 10px;
+    }
+
+    #btn-undo span {
+        font-size: 0.9rem;
+    }
+
+    /* Stats in main menu */
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .settings-header h2 {
+        font-size: 1.5rem;
+    }
+}

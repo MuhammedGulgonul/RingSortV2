@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ring Sort Puzzle</title>
+    <meta name="description" content="Renkli halkaları sırala! Eğlenceli ve bağımlılık yapan bulmaca oyunu.">
+
+    <!-- Yandex Games SDK -->
+    <!-- Yandex Games SDK (Official CDN) -->
+    <script src="https://yandex.ru/games/sdk/v2"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css?v=13.4">
+    <link rel="stylesheet" href="mobile.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen active">
+            <div class="loading-content">
+                <div class="logo-rings">
+                    <div class="ring ring-1"></div>
+                    <div class="ring ring-2"></div>
+                    <div class="ring ring-3"></div>
+                </div>
+                <h1>Ring Sort Puzzle</h1>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <p class="loading-text">Yükleniyor...</p>
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen">
+            <div class="menu-content">
+                <div class="game-title">
+                    <div class="title-rings">
+                        <span class="title-ring" style="--color: #ff6b6b">●</span>
+                        <span class="title-ring" style="--color: #4ecdc4">●</span>
+                        <span class="title-ring" style="--color: #ffe66d">●</span>
+                    </div>
+                    <h1>Ring Sort Puzzle</h1>
+                    <p class="subtitle">Puzzle Game</p>
+                </div>
+
+                <div class="menu-buttons">
+                    <button id="btn-play" class="btn btn-primary">
+                        <span class="btn-icon">▶</span>
+                        <span>Oyna</span>
+                    </button>
+                    <button id="btn-levels" class="btn btn-secondary">
+                        <span class="btn-icon">📋</span>
+                        <span>Seviyeler</span>
+                    </button>
+                    <button id="btn-settings" class="btn btn-secondary">
+                        <span class="btn-icon">⚙️</span>
+                        <span>Ayarlar</span>
+                    </button>
+                </div>
+
+                <div class="stats-display">
+                    <div class="stat">
+                        <span class="stat-value" id="total-stars">0</span>
+                        <span class="stat-label">⭐ Yıldız</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="completed-levels">0</span>
+                        <span class="stat-label">✓ Tamamlanan</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Select -->
+        <div id="level-select" class="screen">
+            <div class="screen-header">
+                <button id="btn-back-menu" class="btn-icon-only">←</button>
+                <h2>Seviye Seç</h2>
+                <div class="header-spacer"></div>
+            </div>
+            <div class="levels-grid" id="levels-grid">
+                <!-- Levels will be generated here -->
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <button id="btn-back-levels" class="btn-icon-only">←</button>
+                <div class="level-badge">
+                    <span class="lbl">Seviye</span>
+                    <span class="val" id="current-level">1</span>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-hint" class="btn-icon-only" title="İpucu">💡</button>
+                    <button id="btn-restart" class="btn-icon-only" title="Yeniden Başlat">🔄</button>
+                </div>
+            </div>
+
+            <div class="game-container">
+                <canvas id="game-canvas"></canvas>
+            </div>
+
+            <div class="game-footer">
+                <div class="moves-badge">
+                    <span class="lbl">Hamle</span>
+                    <span class="val" id="moves-count">0</span>
+                </div>
+                <button id="btn-undo" class="btn btn-secondary">
+                    <span>↩️ Geri Al</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-card">
+                <div class="settings-header">
+                    <h2>Ayarlar</h2>
+                    <button class="btn-close" id="btn-close-settings">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-row">
+                        <span class="setting-name" id="lbl-sound">🔊 Ses Efektleri</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="toggle-sound" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row" style="margin-top: 15px;">
+                        <span class="setting-name" id="lbl-language">🌐 Language</span>
+                        <div class="lang-options">
+                            <button id="btn-lang-en" class="btn-sm">🇬🇧</button>
+                            <button id="btn-lang-tr" class="btn-sm">🇹🇷</button>
+                            <button id="btn-lang-ru" class="btn-sm">🇷🇺</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Complete Modal -->
+        <div id="complete-modal" class="modal">
+            <div class="modal-card">
+                <span class="victory-icon">🏆</span>
+                <h2>Tebrikler!</h2>
+                <div class="star-container">
+                    <span class="star">⭐</span>
+                    <span class="star">⭐</span>
+                    <span class="star">⭐</span>
+                </div>
+                <p class="complete-msg">Seviye <span id="completed-level-num">1</span> tamamlandı!</p>
+                <button id="btn-next-level" class="btn btn-primary btn-next">
+                    <span>Sonraki Seviye →</span>
+                </button>
+                <button id="btn-replay-level" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">
+                    <span>🔄 Tekrar Oyna</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Particles Container -->
+        <div id="particles-container"></div>
+    </div>
+
+    <!-- Game Scripts -->
+    <script src="three.min.js?v=13.4"></script>
+    <script src="levels.js?v=13.4"></script>
+    <script src="game.js?v=13.4"></script>
+
+</body>
+
+</html>
