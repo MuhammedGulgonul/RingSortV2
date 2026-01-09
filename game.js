@@ -1146,24 +1146,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Language Detection Logic
             if (game && game.lang) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlLang = urlParams.get('lang'); // Yandex URL parameter
                 const saved = localStorage.getItem('rs_lang');
+                const currentLang = game.lang.lang; // Already set to browser lang
+                const isYandexPlatform = window.location.hostname.includes('yandex');
 
-                if (saved) {
-                    // Priority 1: User saved preference
+                if (urlLang && ['en', 'ru', 'tr'].includes(urlLang)) {
+                    // Priority 1: URL parameter (Yandex platform uses this)
+                    console.log('→ Using URL language:', urlLang);
+                    game.lang.setLanguage(urlLang, false);
+                } else if (isYandexPlatform && yandexLang && yandexLang !== currentLang) {
+                    // Priority 2: Yandex SDK language (on Yandex platform)
+                    console.log('→ Using Yandex SDK language:', yandexLang);
+                    game.lang.setLanguage(yandexLang, false);
+                } else if (saved) {
+                    // Priority 3: User saved preference (local testing)
                     console.log('→ Using saved language:', saved);
                     game.lang.setLanguage(saved, false);
                 } else {
-                    // Priority 2: Browser language (already set in constructor)
-                    const currentLang = game.lang.lang; // Already set to browser lang
-                    const isYandexPlatform = window.location.hostname.includes('yandex');
-
-                    // Only override with SDK language on Yandex platform
-                    if (isYandexPlatform && yandexLang && yandexLang !== currentLang) {
-                        console.log('→ Using Yandex SDK language:', yandexLang, '(was:', currentLang + ')');
-                        game.lang.setLanguage(yandexLang, false);
-                    } else {
-                        console.log('→ Keeping browser language:', currentLang, '(local test)');
-                    }
+                    // Priority 4: Browser language
+                    console.log('→ Keeping browser language:', currentLang);
                 }
             }
 
