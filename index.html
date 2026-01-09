@@ -19,6 +19,11 @@
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css?v=13.4">
     <link rel="stylesheet" href="mobile.css">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F172A">
+    <link rel="apple-touch-icon" href="icon_512.png">
 </head>
 
 <body>
@@ -179,6 +184,16 @@
     <script src="levels.js"></script>
     <script src="yandex-sdk.js"></script>
     <script src="cloud-save.js"></script>
+    <!-- PWA Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW success:', reg.scope))
+                    .catch(err => console.log('SW fail:', err));
+            });
+        }
+    </script>
     <script src="game.js"></script>
 
 </body>

@@ -115,46 +115,89 @@ class LevelManager {
         for (let i = 0; i < cylinders - colors; i++) state.push([]);
 
         // 2. SCRAMBLE
-        // 2. SCRAMBLE (ENHANCED V12.4)
-        // User complained levels are "lined up". We need MORE ENTROPY.
-        const baseMoves = 25 + (ringsPerColor - 4) * 10; // Increased base from 10 to 25
-        const levelFactor = Math.floor(levelNum * 2.5);  // Increased multiplier from 1.5 to 2.5
+        // 2. SCRAMBLE (ENHANCED V14.2)
+        // Solvability Guarantee & High Entropy
+        const baseMoves = 60 + (ringsPerColor - 4) * 20; // Significantly increased base moves
+        const levelFactor = Math.floor(levelNum * 4.0);  // Higher multiplier for later levels
         const scrambleMoves = baseMoves + levelFactor;
+
+        // SOLVABILITY: Pick a "Safety Color" that is forbidden from entering Locked Poles.
+        // This ensures at least one color is always fully available in the open area to unlock the locks.
+        const lockedPoles = config.locked || [];
+        const hasLocks = lockedPoles.length > 0;
+        const safetyColor = hasLocks ? selectedColors[0] : null;
 
         let lastFrom = -1;
         let lastTo = -1;
         let actualMoves = 0;
+        let consecutiveSameColorMoves = 0;
 
         for (let i = 0; i < scrambleMoves; i++) {
             const moves = [];
+
             for (let from = 0; from < state.length; from++) {
                 if (state[from].length === 0) continue;
-                // V12.4: Prevent immediate undo (moving back to where it came from)
-                if (from === lastTo && Math.random() > 0.1) continue;
+
+                // Prevent immediate undo (back and forth)
+                if (from === lastTo && Math.random() > 0.15) continue;
 
                 const ring = state[from][state[from].length - 1];
 
                 for (let to = 0; to < state.length; to++) {
                     if (from === to) continue;
+
+                    // Rule 1: Capacity Check
                     const targetCyl = state[to];
                     if (targetCyl.length >= ringsPerColor) continue;
 
-                    // V12.4: Heuristic - Prefer moves that don't just stack same colors unless necessary
-                    // If target has top color == my color, try to avoid it slightly to ensure mixing
-                    // But we must allow it sometimes otherwise it's unsolvable? 
-                    // Actually, random is best, but we need MORE moves.
+                    // Rule 2: Locked Pole Protection (CRITICAL FOR SOLVABILITY)
+                    // If this is the "Safety Color", it MUST NOT go into a Locked Pole.
+                    if (hasLocks && ring === safetyColor && lockedPoles.includes(to)) {
+                        continue;
+                    }
 
-                    moves.push({ from, to });
+                    // Rule 3: Entropy Heuristic - Prefer Mixing
+                    // We want to avoid placing a color on top of the SAME color during scramble
+                    // because that makes the game look "already solved" or "clumped".
+                    let weight = 1.0;
+
+                    if (targetCyl.length > 0) {
+                        const topColor = targetCyl[targetCyl.length - 1];
+                        if (topColor === ring) {
+                            // Punishment for stacking same color (unless it's the only option)
+                            weight = 0.1;
+                        } else {
+                            // Reward for mixing different colors
+                            weight = 2.0;
+                        }
+                    } else {
+                        // Moving to empty is neutral/good
+                        weight = 1.5;
+                    }
+
+                    moves.push({ from, to, weight });
                 }
             }
 
             if (moves.length > 0) {
-                const move = moves[Math.floor(Math.random() * moves.length)];
-                const ring = state[move.from].pop();
-                state[move.to].push(ring);
+                // Weighted Random Selection
+                const totalWeight = moves.reduce((sum, m) => sum + m.weight, 0);
+                let randomVal = Math.random() * totalWeight;
+                let selectedMove = moves[0];
 
-                lastFrom = move.from;
-                lastTo = move.to;
+                for (const move of moves) {
+                    randomVal -= move.weight;
+                    if (randomVal <= 0) {
+                        selectedMove = move;
+                        break;
+                    }
+                }
+
+                const ring = state[selectedMove.from].pop();
+                state[selectedMove.to].push(ring);
+
+                lastFrom = selectedMove.from;
+                lastTo = selectedMove.to;
                 actualMoves++;
             }
         }
@@ -164,7 +207,7 @@ class LevelManager {
             config,
             cylinders: state,
             selectedColors,
-            minMoves: Math.max(5, Math.ceil(actualMoves * 0.5)) // V10.4: Heuristic Adjustment
+            minMoves: actualMoves // V14.3: Hardcore Difficulty (1:1 Ratio for 3 Stars)
         };
     }
 

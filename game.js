@@ -421,8 +421,26 @@ class Game3D {
         this.poles = [];
         this.particles = [];
 
-        const cols = numCylinders > 7 ? Math.ceil(numCylinders / 2) : numCylinders;
-        const rows = numCylinders > 7 ? 2 : 1;
+        // Dynamic Layout Calculation
+        const isPortrait = window.innerHeight > window.innerWidth;
+
+        let cols = numCylinders;
+        let rows = 1;
+
+        if (isPortrait) {
+            // Mobile/Portrait: Use 2 rows if more than 4 poles
+            if (numCylinders > 4) {
+                cols = Math.ceil(numCylinders / 2);
+                rows = 2;
+            }
+        } else {
+            // Landscape/Desktop: Use 2 rows if more than 7 poles
+            if (numCylinders > 7) {
+                cols = Math.ceil(numCylinders / 2);
+                rows = 2;
+            }
+        }
+
         const spacing = 4.0; // Standard Spacing
 
         for (let i = 0; i < numCylinders; i++) {
@@ -659,15 +677,13 @@ class Game3D {
     }
 
     handleHover(index) {
-        // V11.9: Visual Interaction Probe
+        // V14.1: Visual Interaction - No scaling to prevent ring shrinking bug
         this.poles.forEach((p, i) => {
             if (!p || !p.group) return;
-            // Highlighting logic: Scale up slightly if hovered
+            // Only change cursor, NO scaling
             if (i === index) {
-                p.group.scale.setScalar(1.05); // Subtle pop
                 document.body.style.cursor = 'pointer';
             } else {
-                p.group.scale.setScalar(1.0);
                 document.body.style.cursor = 'default';
             }
         });
@@ -799,7 +815,7 @@ class App {
         // Game Actions (Monetized)
         click('btn-next-level', () => {
             document.getElementById('complete-modal').classList.remove('active');
-            this.showAd(() => this.start(this.unlocked));
+            this.showAd(() => this.start(this.curLvl + 1));
         });
         click('btn-replay-level', () => {
             document.getElementById('complete-modal').classList.remove('active');
@@ -821,46 +837,184 @@ class App {
             };
         }
 
-        // Hint (Rewarded Auto Move)
+        // Hint (Smart Algorithm v3 - No Loops)
         click('btn-hint', () => {
             this.showReward(() => {
                 const s = this.state;
                 let bestMove = null;
+                let bestScore = -1;
 
-                // Find a valid move
-                for (let f = 0; f < s.cylinders.length; f++) {
-                    if (!s.cylinders[f].length || s.lockedPoles.includes(f)) continue;
-                    for (let t = 0; t < s.cylinders.length; t++) {
-                        if (s.isValidMove(f, t)) {
-                            bestMove = { from: f, to: t };
-                            break;
+                // Count same-color rings from top
+                const countSameFromTop = (cylIndex) => {
+                    const cyl = s.cylinders[cylIndex];
+                    if (cyl.length === 0) return 0;
+                    const topColor = cyl[cyl.length - 1];
+                    let count = 0;
+                    for (let i = cyl.length - 1; i >= 0; i--) {
+                        if (cyl[i] === topColor) count++;
+                        else break;
+                    }
+                    return count;
+                };
+
+                // Analyze cylinder structure
+                const analyzeCylinder = (idx) => {
+                    const cyl = s.cylinders[idx];
+                    if (cyl.length === 0) return { topColor: null, sameCount: 0, isComplete: false, isTrapped: false };
+
+                    const topColor = cyl[cyl.length - 1];
+                    let sameCount = 0;
+                    for (let i = cyl.length - 1; i >= 0; i--) {
+                        if (cyl[i] === topColor) sameCount++;
+                        else break;
+                    }
+
+                    const isComplete = sameCount === cyl.length && cyl.length === s.capacity;
+                    const isTrapped = sameCount < cyl.length; // Different color below
+
+                    return { topColor, sameCount, isComplete, isTrapped };
+                };
+
+                // Find best matching stack for a color
+                const findMatchingStack = (color) => {
+                    let best = { idx: -1, count: 0 };
+                    for (let i = 0; i < s.cylinders.length; i++) {
+                        if (s.lockedPoles.includes(i)) continue;
+                        const info = analyzeCylinder(i);
+                        if (info.topColor === color && info.sameCount > best.count) {
+                            best = { idx: i, count: info.sameCount };
                         }
                     }
-                    if (bestMove) break;
+                    return best;
+                };
+
+                // Score move quality
+                const scoreMove = (from, to) => {
+                    // Soft Anti-Loop: Heavy penalty if reversing the last move
+                    if (this.lastHintMove && this.lastHintMove.from === to && this.lastHintMove.to === from) {
+                        return -5000;
+                    }
+
+                    const fromInfo = analyzeCylinder(from);
+                    const toInfo = analyzeCylinder(to);
+
+                    // Never move complete stacks
+                    if (fromInfo.isComplete) return -10000;
+
+                    // PRIORITY 1: Rescue trapped rings
+                    if (fromInfo.isTrapped) {
+                        const match = findMatchingStack(fromInfo.topColor);
+
+                        if (to === match.idx && match.count > 0) {
+                            const totalRings = fromInfo.sameCount + match.count;
+                            const wouldComplete = totalRings === s.capacity;
+                            return 10000 + (wouldComplete ? 5000 : match.count * 100);
+                        }
+
+                        if (toInfo.topColor === null) {
+                            return 8000 + fromInfo.sameCount * 50;
+                        }
+                    }
+
+                    // PRIORITY 2: Consolidate matching stacks
+                    if (toInfo.topColor === fromInfo.topColor && toInfo.sameCount > 0) {
+                        const totalRings = fromInfo.sameCount + toInfo.sameCount;
+                        if (totalRings > s.capacity) return -5000;
+
+                        const wouldComplete = totalRings === s.capacity;
+                        if (wouldComplete) return 5000 + totalRings * 100;
+
+                        // CRITICAL: Prefer moving SMALLER to LARGER
+                        if (fromInfo.sameCount < toInfo.sameCount) {
+                            return 4000 + toInfo.sameCount * 100; // High priority
+                        }
+                        // If sizes are equal, it's just swapping stacks. Low priority to avoid loops unless trapped.
+                        else if (fromInfo.sameCount === toInfo.sameCount) {
+                            return 1000;
+                        }
+                        else {
+                            return 2000 + fromInfo.sameCount * 50; // Larger to smaller (only if needed)
+                        }
+                    }
+
+                    // PRIORITY 3: Organize to empty (ONLY if no matching stack exists)
+                    if (toInfo.topColor === null) {
+                        // Check if there's a better matching stack
+                        const match = findMatchingStack(fromInfo.topColor);
+                        if (match.idx >= 0 && match.idx !== from) {
+                            return 200; // Low: prefer consolidation over empty
+                        }
+                        // V13.9: Prevent loops - Only move to empty if trapped (urgent) 
+                        return fromInfo.isTrapped ? 1500 : 50;
+                    }
+
+                    return 100;
+                };
+
+                // Find best valid move
+                for (let f = 0; f < s.cylinders.length; f++) {
+                    if (!s.cylinders[f].length || s.lockedPoles.includes(f)) continue;
+                    const fromInfo = analyzeCylinder(f);
+                    if (fromInfo.isComplete) continue;
+
+                    for (let t = 0; t < s.cylinders.length; t++) {
+                        if (f === t || s.lockedPoles.includes(t)) continue; // Skip locked destination
+
+                        if (s.isValidMove(f, t)) {
+                            const score = scoreMove(f, t);
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMove = { from: f, to: t };
+                            }
+                        }
+                    }
                 }
 
-                if (bestMove) {
-                    // Execute move
-                    const ring = s.cylinders[bestMove.from][s.cylinders[bestMove.from].length - 1];
-                    s.interact(bestMove.from);
-                    s.interact(bestMove.to);
+                if (bestMove && bestScore > 0) {
+                    const reason = bestScore > 8000 ? '🔓' : bestScore > 4000 ? '✅' : bestScore > 2000 ? '🔄' : '📦';
+                    console.log(`💡 ${reason} ${bestMove.from}→${bestMove.to} (skor: ${bestScore})`);
 
-                    // Animate
-                    const p = this.game3D.poles[bestMove.from];
-                    const ringMesh = p.ringMeshes.pop();
-                    this.game3D.animateMove(bestMove.from, bestMove.to, ringMesh, () => {
-                        this.game3D.handleHover(-1);
-                        this.game3D.checkReveals();
-                        this.updUI();
-                        const result = s.cylinders.every(c => c.length === 0 || (c.length === s.capacity && c.every(r => r === c[0])));
-                        if (result) {
-                            this.audio.playSound('complete');
-                            this.audio.playSound('confetti');
-                            setTimeout(() => this.completeLevel(), 1000);
-                        } else {
-                            this.audio.playSound('drop');
-                        }
-                    });
+                    // Track last move for soft anti-loop
+                    this.lastHintMove = { from: bestMove.from, to: bestMove.to };
+
+                    // Execute move in game state
+                    s.interact(bestMove.from); // Select
+                    const res = s.interact(bestMove.to); // Drop
+
+                    // Use same animation as manual play
+                    const fromPole = this.game3D.poles[bestMove.from];
+                    const ringMesh = fromPole.ringMeshes.pop();
+
+                    if (ringMesh) {
+                        // DON'T push to toPole yet - animateMove does it at line 576
+                        this.game3D.animateMove(bestMove.from, bestMove.to, ringMesh, () => {
+                            this.game3D.handleHover(-1);
+
+                            // Check for reveals (mystery mode)
+                            if (this.game3D.checkReveals()) {
+                                this.audio.playSound('reveal');
+                            }
+
+                            // Check for unlocks
+                            if (res.unlocked) {
+                                this.audio.playSound('unlock');
+                                this.game3D.unlockAll();
+                            }
+
+                            this.updUI();
+
+                            // Check level complete
+                            console.log('💡 Hint callback - res.result:', res.result);
+                            if (res.result === 'levelComplete') {
+                                console.log('✅ Level complete detected!');
+                                this.audio.playSound('complete');
+                                this.audio.playSound('confetti');
+                                setTimeout(() => this.levelComplete(), 1000);
+                            } else {
+                                this.audio.playSound('drop');
+                            }
+                        });
+                    }
                 }
             });
         });
@@ -985,9 +1139,11 @@ class App {
     levelComplete() {
         try {
             const maxFor3 = this.state.minMoves;
-            const maxFor2 = this.state.minMoves + 3;
+            // V14.3: 2 Stars = Allow 25% slack (rounded up)
+            // e.g., if min=20, maxFor3=20, maxFor2=25.
+            const maxFor2 = Math.ceil(this.state.minMoves * 1.25);
 
-            console.log("Level Complete. Moves:", this.state.moves, "Min:", maxFor3);
+            console.log("Level Complete. Moves:", this.state.moves, "Min:", maxFor3, "2StarLimit:", maxFor2);
 
             let stars = 1;
             if (this.state.moves <= maxFor3) stars = 3;
@@ -1043,13 +1199,15 @@ class App {
         const hAd = document.getElementById('hint-ad-icon');
         const count = this.state.hints;
 
-        if (count > 0) {
-            hBadge.classList.remove('hidden');
-            hBadge.innerText = count;
-            hAd.classList.add('hidden');
-        } else {
-            hBadge.classList.add('hidden');
-            hAd.classList.remove('hidden');
+        if (hBadge && hAd) {
+            if (count > 0) {
+                hBadge.classList.remove('hidden');
+                hBadge.innerText = count;
+                hAd.classList.add('hidden');
+            } else {
+                hBadge.classList.add('hidden');
+                hAd.classList.remove('hidden');
+            }
         }
     }
 
